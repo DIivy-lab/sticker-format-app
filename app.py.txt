@@ -1,0 +1,54 @@
+import streamlit as st
+import pandas as pd
+from openpyxl import load_workbook
+
+# Load the blank sticker template
+TEMPLATE_PATH = "sticker_template.xlsx"  # Replace with actual template path
+OUTPUT_PATH = "formatted_sticker.xlsx"
+
+def generate_sticker(products, quantities):
+    wb = load_workbook(TEMPLATE_PATH)
+    ws = wb.active
+    
+    # Identify header positions
+    for row in ws.iter_rows(min_row=1, max_row=10):
+        for cell in row:
+            if cell.value:
+                if "Raw Material" in str(cell.value):
+                    product_col = cell.column
+                    header_row = cell.row
+                elif "Qty. Req." in str(cell.value):
+                    qty_col = cell.column
+
+    # Insert data
+    start_row = header_row + 1
+    for i, (product, qty) in enumerate(zip(products, quantities)):
+        ws.cell(row=start_row + i, column=product_col, value=product)
+        ws.cell(row=start_row + i, column=qty_col, value=qty)
+    
+    # Save the file
+    wb.save(OUTPUT_PATH)
+    return OUTPUT_PATH
+
+# Streamlit UI
+st.title("Sticker Format Generator")
+st.write("Enter the product details below:")
+
+# Input form
+num_entries = st.number_input("Number of Products", min_value=1, max_value=50, value=5)
+products = []
+quantities = []
+
+for i in range(num_entries):
+    col1, col2 = st.columns(2)
+    with col1:
+        product = st.text_input(f"Product {i+1}", "")
+    with col2:
+        qty = st.number_input(f"Quantity {i+1} (Kg)", min_value=0.1, value=1.0, step=0.1)
+    products.append(product)
+    quantities.append(qty)
+
+if st.button("Generate Sticker File"):
+    file_path = generate_sticker(products, quantities)
+    st.success("Sticker file generated successfully!")
+    st.download_button(label="Download Sticker File", data=open(file_path, "rb"), file_name="sticker.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
